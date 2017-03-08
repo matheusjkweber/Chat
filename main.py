@@ -8,6 +8,7 @@ from Server import Server
 from Client import Client
 from Message import Message
 from datetime import datetime
+import jsonpickle
 
 server = Server()
 
@@ -39,7 +40,10 @@ server.send_message_to_room(message, test1, "Room 1")
 
 server.send_message_to_room(message, test2, "Room 1")
 
-print(server.send_private_message(message, test1, "Test"))
+print(jsonpickle.encode(server.rooms[0]));
 
-print(server.clients[0].messages)
+
+#print(server.send_private_message(message, test1, "Test"))
+
+#print(server.clients[0].messages)
 #print(server.rooms[0].messages)

@@ -3,6 +3,7 @@ This code implements a room class.
 """
 __author__ = "Matheus Jose Krumenauer Weber"
 __email__ = "matheus.jk.weber@gmail.com"
+import json
 
 class Room:
 
@@ -19,3 +20,6 @@ class Room:
 
     """Send a message to the room."""
 
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+                          sort_keys=True, indent=4)
