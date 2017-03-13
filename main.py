@@ -18,6 +18,10 @@ test2 = server.login("Test 1", "100.000.000.00")
 
 test3 = server.login("Test 2", "100.000.000.00")
 
+server.send_private_message(test1.token, "Test 2", "teste")
+
+print(server.get_private_messages(test3.token))
+
 admin = Client("admin", True, "100.000.000.00")
 
 is_created = server.create_room(admin, "Room 1")
@@ -40,7 +44,6 @@ server.send_message_to_room(message, test1, "Room 1")
 
 server.send_message_to_room(message, test2, "Room 1")
 
-print(jsonpickle.encode(server.rooms[0]));
 
 
 #print(server.send_private_message(message, test1, "Test"))

@@ -7,6 +7,9 @@ __email__ = "matheus.jk.weber@gmail.com"
 from Client import Client
 from Token import Token
 from Room import Room
+from ApiMessage import ApiMessage
+from Message import Message
+import jsonpickle
 
 from datetime import datetime
 
@@ -19,7 +22,7 @@ class Server:
 
     """Intialize the server."""
 
-    def login(self, nickname, ip):
+    def login(self, nickname, ip, debug = True):
         if self.verify_nickname(nickname):
             client = Client(nickname, False, ip)
             token = Token(len(self.clients))
@@ -27,9 +30,11 @@ class Server:
             self.clients.append(client)
 
             """TODO: Send client to user."""
+            if debug == False:
+                return ApiMessage(200, "", client).returnJson()
             return client
         else:
-            return "Nickname already used."
+            return ApiMessage(404, "Nickname already used.", None).returnJson()
 
     """Login the user or return a error."""
 
@@ -133,20 +138,61 @@ class Server:
 
     """Send a message to the room."""
 
-    def send_private_message(self, message, client, nickname):
-        if self.verify_token(client):
-            for c in self.clients:
-                if c.nickname == nickname:
-                    c.messages.append(message)
-                    return True
-                    """Send message to the client."""
-            return "Client not found in the server."
-        else:
-            return "Token expired."
-
-    """Send a private message to a client."""
-
     def send_clients(self, room_name):
         # Send a list with all clients in the room.
         pass
 
+    def get_users_online(self):
+        clients = []
+        for c in self.clients:
+            clients.append(c.nickname);
+
+        return ApiMessage(200, "", clients).returnJson();
+
+    """Get the users online."""
+
+    def get_private_messages(self, token):
+        client = None
+        for c in self.clients:
+            if c.token == token:
+                client = c
+
+        if client != None:
+            return ApiMessage(200, "", client.messages).returnJson()
+
+        return ApiMessage(404, "No client found with this token.", None).returnJson()
+
+    """Get private messages using token."""
+
+    def send_private_message(self, token, nickname, message):
+        sender = self.get_client_by_token(token)
+        if self.verify_token(sender):
+            target = self.get_client_by_nickname(nickname)
+            if target != None:
+                new_message = Message(sender, message, datetime.now())
+                sender.messages.append(new_message)
+                target.messages.append(new_message)
+                return ApiMessage(200, "", None)
+            else:
+                return ApiMessage(404, "No client with this nickname found.", None).returnJson()
+
+        else:
+            return ApiMessage(404, "Token expired.", None).returnJson()
+
+    """Send a private message to a client."""
+
+    def get_client_by_token(self, token):
+        for c in self.clients:
+            if c.token == token:
+                return c
+        return None
+
+    """Get client by token."""
+
+    def get_client_by_nickname(self, nickname):
+        for c in self.clients:
+            if c.nickname == nickname:
+                return c
+        return None
+
+    """Get client by name."""
