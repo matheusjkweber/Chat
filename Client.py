@@ -8,9 +8,8 @@ from datetime import datetime
 
 class Client:
 
-    def __init__(self, nickname, is_admin, ip):
+    def __init__(self, nickname, ip):
         self.nickname = nickname
-        self.is_admin = is_admin
         self.ip = ip
         self.is_online = True
         self.is_typing = False

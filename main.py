@@ -11,42 +11,69 @@ from datetime import datetime
 import jsonpickle
 
 server = Server()
+## Server test.
 
-test1 = server.login("Test", "100.000.000.00")
+# Create rooms.
+server.create_room("Room 1")
+server.create_room("Room 2")
+server.create_room("Room 3")
+print(server.create_room("Room 3"))
 
-test2 = server.login("Test 1", "100.000.000.00")
+# Remove room.
+server.delete_room("Room 1")
+print(server.delete_room("Room 1"))
 
-test3 = server.login("Test 2", "100.000.000.00")
+print(server.rooms)
+## Api Test
 
-server.send_private_message(test1.token, "Test 2", "teste")
+# Login clients to server.
+print(server.login("Client 1", "111.222.333.444"))
+print(server.login("Client 2", "111.222.333.444"))
+print(server.login("Client 1", "111.222.333.444"))
 
-print(server.get_private_messages(test3.token))
+# Return clients to client.
+print(server.get_users_online())
 
-admin = Client("admin", True, "100.000.000.00")
+# Return rooms to client.
+print(server.get_rooms())
 
-is_created = server.create_room(admin, "Room 1")
+# Return private messages to client.
+test_token = server.clients[0].token
+test_token2 = server.clients[1].token
 
-#is_deleted = server.delete_room(admin, "Room 1")
+print(server.get_private_messages(test_token))
+print(server.get_private_messages("assasa"))
 
+# Client enter in a room.
+print(server.enter_room(test_token, "Room 2"))
+print(server.enter_room("sassasa", "Room 2"))
+print(server.enter_room(test_token, "Room 4"))
 
+print(server.enter_room(test_token2, "Room 2"))
 
-server.enter_room(test1, "Room 1")
+# Return clients on room.
+print(server.get_users_room("Room 2"))
 
-server.enter_room(test2, "Room 1")
+# Client send message to a room.
+print(server.send_message_to_room(test_token, "Room 2", "Test Message"))
+print(server.send_message_to_room(test_token2, "Room 2", "Test Message 2"))
+print(server.send_message_to_room("aaaa", "Room 2", "Error message"))
+print(server.send_message_to_room(test_token, "Room 1", "Error message"))
 
-server.enter_room(test3, "Room 1")
+print(server.rooms[0].messages)
 
-server.leave_room(test2, "Room 1")
+# Return messages in the room to client.
+print(server.get_messages_room("Room 2"))
+print(server.get_messages_room("Room 1"))
 
-message = Message(test1, "Message test", datetime.now)
+# Client leave a room.
+print(server.leave_room(test_token, "Room 2"))
+print(server.leave_room("lalala", "Room 2"))
+print(server.leave_room(test_token, "Room 1"))
 
-server.send_message_to_room(message, test1, "Room 1")
+print(server.rooms[0].clients)
 
-server.send_message_to_room(message, test2, "Room 1")
-
-
-
-#print(server.send_private_message(message, test1, "Test"))
-
-#print(server.clients[0].messages)
-#print(server.rooms[0].messages)
+# Client logout.
+print(server.logout(test_token2))
+print(server.clients)
+print(server.rooms[0].clients)
