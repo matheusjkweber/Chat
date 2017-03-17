@@ -9,6 +9,7 @@ from Client import Client
 from Message import Message
 from datetime import datetime
 import jsonpickle
+import socket
 
 server = Server()
 ## Server test.
@@ -77,3 +78,14 @@ print(server.rooms[0].clients)
 print(server.logout(test_token2))
 print(server.clients)
 print(server.rooms[0].clients)
+
+while(True):
+    option = input("Are you a server or a client?")
+    if option == "server":
+        server.start_server(10000)
+        break
+    elif option == "client":
+        sock = socket.create_connection(('localhost', 10000))
+        break
+    else:
+        print("Type 'server' or 'client'.")

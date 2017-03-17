@@ -10,6 +10,8 @@ from Room import Room
 from ApiMessage import ApiMessage
 from Message import Message
 import jsonpickle
+import socket
+import sys
 
 from datetime import datetime
 
@@ -169,6 +171,38 @@ class Server:
         return ApiMessage(404, "Token expired.", None).returnJson()
 
     # Server methods.
+    def start_server(self, port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = ('localhost', port)
+        print("Initializing server in port: ", port)
+        sock.bind(server_address)
+        sock.listen(1)
+
+        while True:
+            # Wait for a connection
+            connection, client_address = sock.accept()
+
+            try:
+
+                # Send data
+                message = "This is the message.  It will be repeated."
+                print(message)
+                sock.send(message.encode())
+
+                # Look for the response
+                amount_received = 0
+                amount_expected = len(message)
+
+                while amount_received < amount_expected:
+                    data = sock.recv(16)
+                    amount_received += len(data)
+                    print("received ")
+
+            finally:
+                print("closing socket")
+                sock.close()
+    """Start the server."""
+
     def create_room(self, name):
         for room in self.rooms:
             if room.name == name:
