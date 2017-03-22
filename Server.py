@@ -113,7 +113,7 @@ class Server:
             self.clients.append(client)
 
             """TODO: Send client to user."""
-            return ApiMessage(200, "", '({}, {})'.format(client, client.token.token)).returnJson()
+            return ApiMessage(200, "", (client.nickname, client.token.token)).returnJson()
         else:
             return ApiMessage(404, "Nickname already used.", None).returnJson()
 
@@ -136,7 +136,7 @@ class Server:
             if c.token == token:
                 client = c
         if client != None:
-            messages = [str(msg) for msg in client.messages]
+            messages = [msg.get_info() for msg in client.messages]
             return ApiMessage(200, "", messages).returnJson()
         return ApiMessage(404, "No client found with this token.", None).returnJson()
 
@@ -209,7 +209,7 @@ class Server:
         room = self.get_room_by_name(name)
 
         if room != None:
-            messages = [str(msg) for msg in room.messages]
+            messages = [msg.get_info() for msg in room.messages]
             return ApiMessage(200, "", messages).returnJson()
 
         return ApiMessage(404, "No room found with this name.", None).returnJson()

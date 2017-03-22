@@ -23,7 +23,7 @@ def lucas(addr):
     log_response(r)
     wait_enter()
     r = json.loads(r)
-    token = r['object']['token']['token']
+    token = r['object'][1]
     s = socket(); s.connect(addr)
     s.send(json.dumps({
         'execute':'create_room',
@@ -85,7 +85,7 @@ def pedro(addr):
     log_response(r)
     wait_enter()
     r = json.loads(r)
-    token = r['object']['token']['token']
+    token = r['object'][1]
     s = socket(); s.connect(addr)
     s.send(json.dumps({
         'execute':'enter_room',

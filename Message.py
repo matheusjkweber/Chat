@@ -14,5 +14,5 @@ class Message:
     """Initialize the message."""
 
 
-    def __str__(self):
-        return '({}, {}, {})'.format(self.timesent, self.client.nickname, self.message)
+    def get_info(self):
+        return (str(self.timesent), self.client.nickname, self.message)
