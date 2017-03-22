@@ -4,10 +4,11 @@ This code implements a room class.
 __author__ = "Matheus Jose Krumenauer Weber"
 __email__ = "matheus.jk.weber@gmail.com"
 import json
+import threading
 
 class Room:
-
     def __init__(self, name):
+        self.lock = threading.Lock()
         self.name = name
         self.clients = []
         self.messages = []
@@ -16,7 +17,8 @@ class Room:
     """Initialize the room."""
 
     def send_message(self, message):
-        self.append(message)
+        with self.lock:
+            self.append(message)
 
     """Send a message to the room."""
 

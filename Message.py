@@ -12,3 +12,7 @@ class Message:
         self.timesent = timesent
 
     """Initialize the message."""
+
+
+    def __str__(self):
+        return '({}, {}, {})'.format(self.timesent, self.client.nickname, self.message)
