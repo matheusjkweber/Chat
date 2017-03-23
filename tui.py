@@ -4,6 +4,8 @@ import curses.ascii
 import sys
 import socket
 import json
+import time
+import threading
 
 # __enum = lambda *args, **kwargs: type('__enum', (), dict(zip(args, map(str, args)), **kwargs))
 
@@ -118,58 +120,109 @@ class TextInput(Widget):
 class ChatClient(object):
 
     class Commands(object):
-        def __init__(self, *args, **kwargs):
-            pass
+        def __init__(self, self_):
+            self.self_ = self_
 
         """ @connect <ip>:<port> nickname """
         def connect(self, args):
-            success = message = None
+            message = None
             try:
                 ip, port = args[1].split(':')
-                self.server_addr = (ip, int(port))
-                s = socket.socket()
-                s.connect(self.server_addr)
-                s.send(json.dumps({
-                    'execute':'login',
-                    'args': {
-                        'nickname': args[2],
-                    }
-                }))
-                r = json.loads(s.recv(4096))
-                s.close()
-                self.token = r.get('object').get('token')
-                success = 200 <= r.get('code') < 300
-                message = '[!] connected to {}:{}'.format(ip, port)
+                self.self_.server_addr = (ip, int(port))
+                self.self_.nickname = args[2]
+                r = self.self_._login(self.self_.server_addr, args[2])
+                if 200 <= r['code'] < 300:
+                    self.self_.token = r.get('object')[1]
+                    message = '[!] connected to {}:{}'.format(ip, port)
+                else:
+                    message = r['message']
             except socket.error as e:
-                success = False
                 message = str(e)
-            except:
-                success = False
+            except Exception as e:
+                # raise
                 message = '[!] please use `@connect <server ip>:<server port> <nickname>\''
-
-            return { 'success': success,
-                     'message': message }
+            return message
 
         def enter_room(self, args):
-            success = True
-            message = 'user entered the room'
-            return { 'success': success,
-                     'message': message }
+            self.__ensure_connected()
+            self.self_.room = args[1]
+            r = self.self_._enter_room(self.self_.server_addr, self.self_.token, args[1])
+            success = 200 <= r.get('code') < 300
+            message = '[!] {}'.format('OK' if success else r['message'])
+            if success:
+                self.self_._send_message_to_room(self.self_.server_addr, self.self_.token, self.self_.room, '~ {} entered the room'.format(self.self_.nickname))
+                self.__listen(self.self_.room)
+            return message
 
-        def private(self, args):
-            success = True
-            message = '[-] para {}: {}'.format(args[1], ' '.join(args[2:]))
-            return { 'success': success,
-                     'message': message }
+        def create_room(self, args):
+            self.__ensure_connected()
+            message = '[!] use @create-room <room name>'
+            if len(args) > 1:
+                r = self.self_._create_room(self.self_.server_addr, args[1])
+                success = 200 <= r.get('code') < 300
+                message = '[!] {}'.format('OK' if success else r['message'])
+
+            return message
+
+        # def private(self, args):
+        #     r = self.self_._send_private_message(self.self_.token, args[1], ' '.join(args[2:]))
+        #     success = 200 <= r.get('code') < 300
+        #     message = '[-] para {}: {}'.format(args[1], ' '.join(args[2:])) if success else \
+        #               '[!] fail to deliver message to {}: {}'.format(args[1], ' '.join(args[2:]))
+        #     return message
+
+        def __listen(self, room):
+            t = threading.Thread(target=self.self_._listener,
+                                 args=(self.self_.server_addr, room))
+            self.self_._keep_listener_alive = True
+            t.daemon = True
+            t.start()
+
+        def people(self, args):
+            self.__ensure_connected()
+            message = '[!] use @people <room name>'
+            if len(args) > 1:
+                r = self.self_._get_users_room(self.self_.server_addr, args[1])
+                success = 200 <= r.get('code') < 300
+                message = 'in this room: {}'.format(reduce(lambda a, b: '{}, {}'.format(a, b), r['object']))
+            return message
+
+        def rooms(self, args):
+            self.__ensure_connected()
+            r = self.self_._get_rooms(self.self_.server_addr)
+            success = 200 <= r.get('code') < 300
+            message = 'rooms: {}'.format(reduce(lambda a, b: '{}, {}'.format(a, b), r['object']))
+            return message
+
+        def leave_room(self, args):
+            self.__ensure_connected()
+            self.self_._send_message_to_room(self.self_.server_addr,
+                                       self.self_.token, self.self_.room,
+                                       '~ {} left the room'.format(self.self_.nickname))
+            r = self.self_._leave_room(self.self_.server_addr, self.self_.token, self.self_.room)
+            success = 200 <= r.get('code') < 300
+            message = '[-] you left.'
+            self.self_.room = ''
+            self.self_._keep_listener_alive = False
+            return message
+
+        def __ensure_connected(self):
+            if not getattr(self.self_, 'server_addr', ''):
+                raise Exception('[!] you have to be connected first.');
+
+        def logout(self, args):
+            self.__ensure_connected()
+            r = self.self_._logout(self.self_.server_addr, self.self_.token)
+            success = 200 <= r.get('code') < 300
+            message = '[-] you are out ;)'
+            return message
 
         def not_found(self, args):
-            success = True
-            message = '   [!] command `{}\' not found'.format(args[0])
-            return { 'success': success,
-                     'message': message }
-        def get_messages
+            message = '[!] command `{}\' not found'.format(args[0])
+            return message
+        # def get_messages
         def kill(self, args):
-            return {'success': True, 'kill': True}
+            return 'kill'
 
     def __init__(self):
         self.stdscr = curses.initscr()
@@ -185,6 +238,7 @@ class ChatClient(object):
         self.phist = curses.panel.new_panel(self.whist)
 
         self.history = []
+        self.history_lock = threading.Lock()
 
         curses.noecho()
         curses.cbreak()
@@ -196,6 +250,18 @@ class ChatClient(object):
         curses.panel.update_panels()
         curses.doupdate()
 
+    def update_messages(self, msg=None):
+        with self.history_lock:
+            if msg:
+                self.history.append(msg)
+
+            for i, line in enumerate(self.history[-self.max_y+5:], 1):
+                self.whist.move(i, 2);
+                self.whist.addstr('{}{}'.format(line, ' ' * (self.max_x - len(line) - 4)))
+
+            curses.panel.update_panels()
+            curses.doupdate()
+
     def loop(self):
         try:
             while True:
@@ -203,20 +269,15 @@ class ChatClient(object):
                 s = str(self.txt_input)
                 split = str.split(s)
                 # log += str(split) + '\n'
-                if len(split) > 0 and split[0][0] == '@':
-                    r = self.__execute(split)
-                    if 'kill' in r:
-                        break
-                    s = r['message']
-                else:
-                    s = '[+] para todos: {}'.format(s)
+                try:
+                    s = self._execute(split)
+                except Exception as e:
+                    s = str(e)
+
+                if 'kill' in s:
+                    break
                 # TODO: split long line into many lines
-                self.history.append(s)
-                for i, line in enumerate(self.history[-self.max_y+5:], 1):
-                    self.whist.move(i, 2);
-                    self.whist.addstr('{}{}'.format(line, ' ' * (self.max_x - len(line) - 4)))
-                curses.panel.update_panels()
-                curses.doupdate()
+                self.update_messages(s)
         except:
             raise
         finally:
@@ -225,12 +286,164 @@ class ChatClient(object):
             curses.echo()
             curses.endwin()
 
-    def __execute(self, args):
-        # print args
-        c = args[0][1:]
-        c = c.replace('-', '_')
-        cmd = ChatClient.Commands()
-        return getattr(cmd, c, cmd.not_found)([c] + args[1:])
+    def _execute(self, args):
+        cmd = ChatClient.Commands(self)
+        if len(args) > 0 and args[0][0] == '@':
+            c = args[0][1:]
+            c = c.replace('-', '_')
+            return getattr(cmd, c, cmd.not_found)([c] + args[1:])
+        elif getattr(self, 'room', ''):
+            m = ' '.join(args)
+            # raise Exception(dir(self))
+            r = self._send_message_to_room(self.server_addr, self.token, self.room, m)
+            return '' if 200 <= r.get('code') < 300 else r.get('message')
+        else:
+            return ' '.join(args)
+
+    def _listener(self, addr, room):
+        count = 0
+        while self._keep_listener_alive:
+            r = self._get_messages_room(addr, room)
+            messages = r['object']
+            if len(messages) > count:
+                for msg in messages[count:]:
+                    m = 'from {}: {}'.format(msg[1], msg[2])
+                    self.update_messages(m)
+                count = len(messages)
+            time.sleep(0.5)
+
+    def _login(self, addr, nickname):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'login',
+            'args': {
+                'nickname': nickname,
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _get_users_online(addr):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'get_users_online'
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _get_private_messages(self, addr, token):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'get_private_messages',
+            'args': {
+                'token': token
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _send_private_message(self, addr, token, nickname, message):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'send_private_message',
+            'args': {
+                'token': token,
+                'nickname': nickname,
+                'message': message
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+
+    def _get_rooms(self, addr):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'get_rooms'
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _enter_room(self, addr, token, room_name):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'enter_room',
+            'args': {
+                'token': token,
+                'room_name': room_name,
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _create_room(self, addr, name):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'create_room',
+            'args': {
+                'name': name,
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _get_users_room(self, addr, name):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'get_users_room',
+            'args': {
+                'name': name,
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _get_messages_room(self, addr, name):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'get_messages_room',
+            'args': {
+                'name': name,
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _send_message_to_room(self, addr, token, room_name, message):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'send_message_to_room',
+            'args': {
+                'token': token,
+                'room_name': room_name,
+                'message': message
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _leave_room(self, addr, token, room_name):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'leave_room',
+            'args': {
+                'token': token,
+                'room_name': room_name
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
+
+    def _logout(self, addr, token):
+        s = socket.socket(); s.connect(addr)
+        s.send(json.dumps({
+            'execute':'logout',
+            'args': {
+                'token': token,
+            }
+        }))
+        r = s.recv(4096); s.close()
+        return json.loads(r)
 
 if __name__ == '__main__':
     chat = ChatClient()

@@ -76,7 +76,7 @@ class Server:
                         else:
                             try:
                                 args = request.get('args', {})
-                                args['ip'] = addr
+                                # args['ip'] = addr
                                 response = f(**args)
                             except TypeError as e:
                                 response = str(e)
@@ -102,6 +102,14 @@ class Server:
         return ApiMessage(404, "invalid execution of {}".format(str(kwargs)), None).returnJson()
 
     """Intialize the server."""
+
+    def __broadcast_new_client(self, client):
+        for c in self.clients:
+            s = socket.socket()
+            s.connect(c.ip)
+            s.send(json.dumps({'new_client':client.nickname}))
+            s.close()
+
 
     # Api Methods.
     def login(self, nickname=None, ip=None, **kwargs):
