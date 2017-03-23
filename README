@@ -1,0 +1,60 @@
+Autores: Cristian Maruan Bosin
+         Matheus Krumenauer Weber
+
+
+Projeto: Batepapo
+
+Resumo:
+O projeto se baseia em duas partes: (I) Existe um servidor que permite a comunicação entre diversos clientes e (II) os próprios clientes que se comunicam com o servidor. Toda a comunicação acontece através do uso de mensagens JSON entre cliente e servidor.
+
+Rodar:
+Primeiro roda-se o servidor (por padrão, ele escolhe uma porta aleatória entre 10000 e 20000)
+Após, inicia-se o cliente.
+
+    python Server.py &  # Executa o servidor
+    python tui.py       # Inicia o cliente
+
+API:
+Para executar métodos no servidor, o cliente deve passar o nome do devido método bem como seus argumentos. Exemplos:
+
+a) para entrar no servidor:
+{"execute": "login", "args": {"nickname": "mauricio"}}
+
+b) para entrar em alguma sala:
+{"execute": "enter_room", "args": {"token": "AVMZEOASLPAB", "room_name": "room1"}}
+
+Como resposta, o sevidor envia três campos: codigo de retorno, mensagem, e algum objeto relevante.
+Para as requisições acima, têm-se as respostas:
+a) {"message": "", "code": 200, "object": ["mauricio", "AVMZEOASLPAB"]}
+b) {"message": "", "code": 200, "object": null}
+
+Interface de usuario
+
+Para utilizar interagir com o sistema, existe uma interface em modo texto.
+Existem os seguintes comandos:
+    @connect ip:port nickname
+        Connecta a um servidor com o nickname
+
+    @enter-room room
+        Entra numa sala especificada
+
+    @create-room room
+        Cria uma sala
+
+    @private person msg
+        Envia mensagem privada a alguem na sala
+
+    @leave-room
+        Sai da sala
+
+    @lougout
+        Sai do servidor
+
+    @kill
+        Encerra cliente
+
+    @people room
+        Mostra pessoas na sala especificada
+
+    @rooms
+        Mostra salas existentes
