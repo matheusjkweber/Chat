@@ -183,14 +183,18 @@ class ChatClient(object):
             if len(args) > 1:
                 r = self.self_._get_users_room(self.self_.server_addr, args[1])
                 success = 200 <= r.get('code') < 300
-                message = 'in this room: {}'.format(reduce(lambda a, b: '{}, {}'.format(a, b), r['object']))
+                message = 'room empty'
+                if r['object']:
+					message = 'in this room: {}'.format(reduce(lambda a, b: '{}, {}'.format(a, b), r['object']))
             return message
 
         def rooms(self, args):
             self.__ensure_connected()
             r = self.self_._get_rooms(self.self_.server_addr)
             success = 200 <= r.get('code') < 300
-            message = 'rooms: {}'.format(reduce(lambda a, b: '{}, {}'.format(a, b), r['object']))
+            message = 'no rooms created'
+            if r['object']:
+				message = 'rooms: {}'.format(reduce(lambda a, b: '{}, {}'.format(a, b), r['object']))
             return message
 
         def leave_room(self, args):

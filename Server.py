@@ -208,7 +208,7 @@ class Server:
             for c in room.clients:
                 clients.append(c.nickname);
             return ApiMessage(200, "", clients).returnJson()
-        return ApiMessage(404, "Room not found in the server.", None)
+        return ApiMessage(404, "Room not found in the server.", None).returnJson()
 
     """Get users in the room."""
 
@@ -249,10 +249,10 @@ class Server:
                 room = self.get_room_by_name(room_name)
                 if room != None:
                     for c in room.clients:
-                        if c.token == token:
+                        if c.token.token == token:
                             room.clients.remove(c)
                             return ApiMessage(200, "", None).returnJson()
-                    return ApiMessage(404, "Client not found in this room", None).returnJson()
+					return ApiMessage(404, "Client not found in this room", None).returnJson()
                 return ApiMessage(404, "No room found with this name.", None).returnJson()
         return ApiMessage(404, "Token expired.", None).returnJson()
 
