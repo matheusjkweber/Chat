@@ -164,12 +164,11 @@ class ChatClient(object):
 
             return message
 
-        # def private(self, args):
-        #     r = self.self_._send_private_message(self.self_.token, args[1], ' '.join(args[2:]))
-        #     success = 200 <= r.get('code') < 300
-        #     message = '[-] para {}: {}'.format(args[1], ' '.join(args[2:])) if success else \
-        #               '[!] fail to deliver message to {}: {}'.format(args[1], ' '.join(args[2:]))
-        #     return message
+        def private(self, args):
+            self.__ensure_connected()
+            r = self.self_._send_private_message(self.self_.server_addr, self.self_.token, args[1], ' '.join(args[2:]))
+            return ''
+
 
         def __listen(self, room):
             t = threading.Thread(target=self.self_._listener,
@@ -302,6 +301,7 @@ class ChatClient(object):
 
     def _listener(self, addr, room):
         count = 0
+        count_p = 0
         while self._keep_listener_alive:
             r = self._get_messages_room(addr, room)
             messages = r['object']
@@ -310,6 +310,15 @@ class ChatClient(object):
                     m = 'from {}: {}'.format(msg[1], msg[2])
                     self.update_messages(m)
                 count = len(messages)
+
+            r = self._get_private_messages(addr, self.token)
+            if 200 <= r['code'] < 300:
+                messages = r['object']
+                if len(messages) > count_p:
+                    for msg in messages[count_p:]:
+                        m = '[private] from {}: {}'.format(msg[1], msg[2])
+                        self.update_messages(m)
+                    count_p = len(messages)
             time.sleep(0.5)
 
     def _login(self, addr, nickname):

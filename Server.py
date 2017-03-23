@@ -141,7 +141,7 @@ class Server:
         self.__ensure_args('get_private_messages',token=token)
         client = None
         for c in self.clients:
-            if c.token == token:
+            if c.token.token == token:
                 client = c
         if client != None:
             messages = [msg.get_info() for msg in client.messages]
@@ -161,7 +161,7 @@ class Server:
                     new_message = Message(sender, message, datetime.now())
                     sender.messages.append(new_message)
                     target.messages.append(new_message)
-                    return ApiMessage(200, "", None)
+                    return ApiMessage(200, "", None).returnJson()
                 else:
                     return ApiMessage(404, "No client with this nickname found.", None).returnJson()
 
